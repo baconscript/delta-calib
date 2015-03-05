@@ -1,0 +1,2 @@
+mkdir -p build
+clang++ -std=c++11 -I/build-lib/cpp.react/include -L/build-lib/cpp.react/build/lib/libCppReact.a -o build/delta-calib src/main.cpp
