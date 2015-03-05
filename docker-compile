@@ -1,0 +1,1 @@
+docker run -it -v $(pwd)/build:/home/docker/build -v $(pwd)/src:/home/docker/src delta-calib "$@"
