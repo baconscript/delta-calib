@@ -17,9 +17,9 @@ WORKDIR build
 RUN cmake ..
 RUN make
 
-# Clone argparse
-WORKDIR /build-lib
-RUN git clone https://github.com/hbristow/argparse.git
+# Install FLTK dev
+# TODO: gtkmm? -- RM 19 Mar 15
+RUN apt-get -y install libfltk1.1-dev libfltk1.1
 
 RUN useradd -m docker
 USER docker
