@@ -21,6 +21,7 @@ function LaserManager(opts){
   this.ready = function(){
     var openPin = Rx.Observable.fromNodeCallback(gpio.open);
     var done = Rx.Observable.from(this.laserPins).flatMap(function(pin){
+      console.log('Opening '+pin);
       return openPin(pin, 'output');
     }).last();
     return done;
