@@ -18,15 +18,46 @@ function LaserManager(opts){
   this.laserPins = opts.laserPins;
 }
 
+/* ```
+ * type LaserID = Int
+ *
+ * data LaserPic = LaserPic {
+ *   laser :: LaserID,
+ *   image :: Image
+ * }
+ * ```
+ */
+
 _.assign(LaserManager.prototype, {
   // ### takeLaserPics :: (CameraManager, Rx.Observable<Any>) -> Rx.Observable<LaserPic>
   takeLaserPics: function(cameraManager, trigger){
+    // Giant leap of faith here: we're assuming that `trigger` will produce exactly
+    // one value at a time and will not produce a new value until we've produced
+    // an event in the output stream. I've got some conceptual work to do here.
 
-    var laserPics = new Rx.Subject();
+    var laserPics = Rx.Subject.create();
 
     trigger.subscribe(function(/* ignore stream value */){
-      var lasers = Rx.Observable.from(this.laserPins);
-      var lasersQueue = new Rx.Subject();
+      var laserSettings = ([false]).concat(this.laserPins);
+      var lasers = Rx.Observable.from(laserSettings);
+      var pics = Rx.Subject();
+      var lasersQueue = Rx.Subject.create();
+      Rx.Observable
+        .zip(pics, lasers.skip(1), function(pic, laser){return laser;})
+        .merge(lasers.take(1))
+        .subscribe(function(laser){
+
+          // laserSet :: Rx.Observable<LaserConfig>
+          var laserSet = this.setLasers([laser]);
+
+          // plainPix :: Rx.Observable<Image>
+          var plainPix = cameraManager.capture(laserSet);
+
+          laserSet.subscribe(function(laser){
+            lasersQueue.onNext(laser);
+          });
+
+        }.bind(this));
     }.bind(this));
     
     return laserPics;
@@ -100,14 +131,13 @@ _.assign(PrinterManager.prototype, {
     // laserPics :: Rx.Observable<LaserPositionPic>
     var laserPics = new Rx.Subject();
 
-    // positionsQueue :: Rx.Subject<Position, LaserPositionPic>
-    var positionsQueue = new Rx.Subject();
-
-    // Give `positionsQueue` a new position after every laser pic.
+    // Every time a new pic gets published, pull the next position from the queue.
     Rx.Observable
 
       // Pair off each outgoing laser pic with an incoming position, but skip the first
       // position since we will have already processed it by the time we get a pic.
+      // We get buffering "for free" since `zip` pairs off events from each stream and holds
+      // onto any events without a match.
       .zip(laserPics, positions.skip(1), function(pic, position){return position;})
 
       // Merge in the first position to kick off the process.
@@ -119,18 +149,16 @@ _.assign(PrinterManager.prototype, {
         // plainPix :: Rx.Observable<LaserPic>
         var plainPix = laserManager.takeLaserPics(cameraManager, moved);
 
-        // after the print head moves, push the next one into the queue
-        moved.subscribe(function(position){
-          positionsQueue.onNext(position);
+        // Link the images with the print head location.
+        plainPix.subscribe(function(pic){
+          laserPics.onNext({intendedPosition: position, image: pic});
         });
 
-        // link the images with the print head location
-        plainPix.subscribe(function(pic){
-          laserPics.onValue({intendedPosition: position, image: pic});
-        });
+        // After the image is published, the `zip` mechanism above will ensure that
+        // the next position gets pushed.
       });
 
-    // sneaky cast to Observable so we're not exposing the Subject
+    // Sneaky cast to Observable so we're not exposing the Subject.
     return laserPics.map(_.identity);
   },
   output: function(){
