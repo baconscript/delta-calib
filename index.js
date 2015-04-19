@@ -129,6 +129,13 @@ function CameraManager(opts){
 }
 
 _.assign(CameraManager.prototype, {
+  capture: function(trigger){
+    var caps = Rx.Subject.create();
+    setTimeout(function(){
+      caps.onNext("Click!");
+    }, 1000);
+    return caps.map(_.identity);
+  }
 });
 
 var LOC_EPSILON = 1e-3;
@@ -314,10 +321,18 @@ if(program.listPorts){
     });
   });
 } else {
-
   var printer = new PrinterManager({
     port: program.port,
     baud: program.baud
   });
-
+  var camera = new CameraManager({
+  });
+  var lasers = new LaserManager({
+    laserPins: LASER_PINS
+  });
+  lasers.ready().subscribe(function(){
+    printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera).subscribe(function(x){
+      console.log(x);
+    });
+  });
 }
