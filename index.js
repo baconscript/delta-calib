@@ -229,7 +229,7 @@ _.assign(PrinterManager.prototype, {
 
         // After the image is published, the `zip` mechanism above will ensure that
         // the next position gets pushed.
-      });
+      }.bind(this));
 
     // Sneaky cast to Observable so we're not exposing the Subject.
     return laserPics.map(_.identity);
