@@ -309,7 +309,6 @@ var zHeads = Rx.Observable.from(Z_VALUES);
 var headPositions = zHeads.map(function(z){
   return $V([0,0,z]);
 });
-headPositions.subscribe(console.log.bind(console));
 
 if(program.listPorts){
   spp.list(function(err, ports){
