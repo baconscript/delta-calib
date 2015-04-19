@@ -313,9 +313,11 @@ if(program.listPorts){
       console.log(port.comName);
     });
   });
-}
+} else {
 
-var printer = new PrinterManager({
-  port: program.port,
-  baud: program.baud
-});
+  var printer = new PrinterManager({
+    port: program.port,
+    baud: program.baud
+  });
+
+}
