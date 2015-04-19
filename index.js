@@ -101,7 +101,7 @@ _.assign(LaserManager.prototype, {
         }.bind(this));
     }.bind(this));
     
-    return laserPics;
+    return laserPics.map(_.identity);
   },
   setLasers: function(conf){
     this._setLasers(conf);
