@@ -1,12 +1,13 @@
 require('coffee-script/register');
-//var gpio = require('pi-gpio');
+var gpio = require('pi-gpio');
 //var RaspiCam = require('raspicam');
 var Rx = require('rx');
 var _ = require('lodash');
 var program = require('commander');
 var package = require('./package');
 require('sylvester');
-var SerialPort = require('serialport').SerialPort;
+var spp = require('serialport');
+var SerialPort = spp.SerialPort;
 
 // pins 16, 18, 22 are the lasers
 var LASER_PINS = [16,18,22];
@@ -16,6 +17,15 @@ var NUM_INTRINSIC_PICS = 12;
 
 function LaserManager(opts){
   this.laserPins = opts.laserPins;
+  this._laserState = new Rx.Subject();
+  this.ready = function(){
+    var openPin = Rx.Observable.fromNodeCallback(gpio.open);
+    var done = Rx.Observable.from(this.laserPins).flatMap(function(pin){
+      return openPin(pin, 'output');
+    }).last();
+    return done;
+  }.bind(this);
+  this._write = Rx.Observable.fromNodeCallback(gpio.write);
 }
 
 /* ```
@@ -28,6 +38,33 @@ function LaserManager(opts){
  * ```
  */
 
+function laserConfigsSame(a, b){
+  var keys = _.uniq(_.keys(a).concat( _.keys(b)));
+  return _.all(keys, function(key){
+    return Boolean(a[key]) === Boolean(b[key]);
+  });
+}
+
+function getOnLaser(a){
+  return _.keys(a).filter(function(k){
+    return a[k];
+  })[0];
+}
+
+function toLaserConfig(pin, value){
+  var x = {};
+  x[pin] = value;
+  return x;
+}
+
+function toOnLaserConfig(pin){
+  return toLaserConfig(pin, true);
+}
+
+function mergeLaserState(oldState, newState){
+  return _.defaults(_.clone(newState), oldState);
+}
+
 _.assign(LaserManager.prototype, {
   // ### takeLaserPics :: (CameraManager, Rx.Observable<Any>) -> Rx.Observable<LaserPic>
   takeLaserPics: function(cameraManager, trigger){
@@ -38,29 +75,53 @@ _.assign(LaserManager.prototype, {
     var laserPics = Rx.Subject.create();
 
     trigger.subscribe(function(/* ignore stream value */){
-      var laserSettings = ([false]).concat(this.laserPins);
+      var laserSettings = ([{}]).concat(this.laserPins.map(toOnLaserConfig));
       var lasers = Rx.Observable.from(laserSettings);
       var pics = Rx.Subject();
       var lasersQueue = Rx.Subject.create();
       Rx.Observable
         .zip(pics, lasers.skip(1), function(pic, laser){return laser;})
         .merge(lasers.take(1))
-        .subscribe(function(laser){
+        .subscribe(function(laserConf){
 
           // laserSet :: Rx.Observable<LaserConfig>
-          var laserSet = this.setLasers([laser]);
+          var laserSet = this.setLasers(laserConf);
 
           // plainPix :: Rx.Observable<Image>
           var plainPix = cameraManager.capture(laserSet);
 
-          laserSet.subscribe(function(laser){
-            lasersQueue.onNext(laser);
-          });
+          Rx.Observable
+            .zip(laserSet, plainPix, function(laserSet, plainPic){
+              return {laser: getOnLaser(laserSet), image: plainPic};
+            }).do(function(lpic){
+              laserPics.onNext(lpic);
+            });
 
         }.bind(this));
     }.bind(this));
     
     return laserPics;
+  },
+  setLasers: function(conf){
+    this._setLasers(conf);
+    return this.getLasers().takeWhile(function(actual){
+      return !laserConfigsSame(conf, actual);
+    }).takeLast(1);
+  },
+  _setLasers: function(conf){
+    this.laserPins.forEach(function(pin){
+
+      var value = conf[pin]? 1: 0;
+      var writes = this._write(pin, value).map(function(){
+        return toLaserConfig(pin, value);
+      });
+
+      Rx.Observable.zip(writes, this._laserState.sample(writes), mergeLaserState)
+        .subscribe(function(state){
+          this._laserState.onNext(state);
+        });
+
+    }.bind(this));
   }
 });
 
@@ -124,6 +185,8 @@ _.assign(PrinterManager.prototype, {
         this._outputLines.onNext(line);
       }.bind(this));
     }.bind(this));
+    this._outputLines.filter(function(line){
+    });
   },
 
   // ### moveToPositionsAndTakeLaserPics :: (Rx.Observable<Position>, LaserManager, CameraManager) -> Rx.Observable<LaserPositionPic>
@@ -187,7 +250,10 @@ _.assign(PrinterManager.prototype, {
     this._sendGcode('M114');
   },
   _sendGcode: function(gcode){
-    // TODO
+    if(!(/\n$/.test(gcode))){
+      gcode += '\n';
+    }
+    this.port.write(gcode);
   },
   _destroy: function(){
     clearInterval(this._intervals.checkLocation);
@@ -210,6 +276,7 @@ program
   .version(package.version)
   .option('-P, --port <port>', 'Set port for connecting to printer', String)
   .option('-B, --baud <rate>', 'Set baudrate for connecting to printer', Number)
+  .option('-L, --list-ports', 'List ports and exit')
   .option('-z, --z-range <low>..<high>', 'Set the range of Z-values', range)
   .option('-Z, --z-step <step>', 'Set Z stepping value in mm', Number)
   .option('-p, --laser-pins <pins>', 'Set which pins to use for lasers', numList)
@@ -218,8 +285,9 @@ program
   .option('-s, --square-size <value>', 'Set chessboard square size in mm', Number)
   .option('-n, --board-size <x>,<y>', 'Set x,y size of chessboard in squares', numList)
   .option('-i, --intrinsic-pics <value>', 'Set number of images to take before calculating intrinsics', Number)
-  .option('-I, --intrinsic-matrix <filename>', "Don't calculate intrinsics; instead load from file")
-  .option('-S, --sim', 'Use simulation (must use this if not on a Raspberry Pi)')
+  .option('-v, --verbose', 'Verbose mode')
+  //.option('-I, --intrinsic-matrix <filename>', "Don't calculate intrinsics; instead load from file")
+  //.option('-S, --sim', 'Use simulation (must use this if not on a Raspberry Pi)')
   .parse(process.argv);
 
 var zRange = program.zRange;
@@ -235,3 +303,19 @@ var headPositions = zHeads.map(function(z){
   return $V([0,0,z]);
 });
 headPositions.subscribe(console.log.bind(console));
+
+if(program.listPorts){
+  spp.list(function(err, ports){
+    if(err){
+      return console.error(err);
+    }
+    ports.forEach(function(port){
+      console.log(port.comName);
+    });
+  });
+}
+
+var printer = new PrinterManager({
+  port: program.port,
+  baud: program.baud
+});
