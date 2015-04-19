@@ -1,0 +1,29 @@
+{
+  "name": "delta-calib",
+  "version": "0.1.0",
+  "description": "Deltabot calibration",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "3D",
+    "printing",
+    "delta",
+    "printer",
+    "deltabot",
+    "calibration",
+    "math"
+  ],
+  "author": "Ryan Muller <ryan@muller.io>",
+  "license": "BSD3",
+  "dependencies": {
+    "coffee-script": "^1.9.2",
+    "commander": "^2.8.0",
+    "lodash": "^3.7.0",
+    "pi-gpio": "0.0.7",
+    "raspicam": "^0.2.13",
+    "rx": "^2.5.2",
+    "sylvester": "0.0.21"
+  }
+}
