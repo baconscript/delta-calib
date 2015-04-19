@@ -146,7 +146,7 @@ function PrinterManager(opts){
     baudrate: opts.baud
   }, false);
   this._outputLines = new Rx.Subject();
-  this.openPort();
+  this.openPort(opts.callback || function(){});
 
   if(opts.log){
     this._outputLines.tap(console.log.bind(console));
@@ -171,13 +171,15 @@ function PrinterManager(opts){
 _.assign(PrinterManager.prototype, {
 
   // ### openPort :: () -> ()
-  openPort: function(){
+  openPort: function(cb){
     this.port.open(function(err){
       if(err){
+        cb(err);
         console.error('Failed to open port '+opts.port+' at baudrate '+opts.baud);
         err.printStackTrace();
         return;
       }
+      cb();
       Rx.Observable.fromEvent(this.port, 'data').scan({events: [], buf: ''}, function(acc, x){
         acc = _.clone(acc);
         acc.buf += x;
@@ -320,18 +322,21 @@ if(program.listPorts){
     });
   });
 } else {
-  var printer = new PrinterManager({
-    port: program.port,
-    baud: program.baud
-  });
   var camera = new CameraManager({
   });
   var lasers = new LaserManager({
     laserPins: LASER_PINS
   });
-  lasers.ready().subscribe(function(){
-    printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera).subscribe(function(x){
-      console.log(x);
-    });
+  var printer = new PrinterManager({
+    port: program.port,
+    baud: program.baud,
+    callback: function(){
+      lasers.ready().subscribe(function(){
+        printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera)
+          .subscribe(function(x){
+            console.log(x);
+          });
+      });
+    }
   });
 }
