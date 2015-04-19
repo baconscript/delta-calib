@@ -290,7 +290,7 @@ program
   //.option('-S, --sim', 'Use simulation (must use this if not on a Raspberry Pi)')
   .parse(process.argv);
 
-var zRange = program.zRange;
+var zRange = program.zRange || [200,50];
 if(zRange[1] > zRange[0]) {
   zRange = [zRange[1], zRange[0]];
 }
