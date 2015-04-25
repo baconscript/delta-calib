@@ -99,7 +99,7 @@ _.assign(LaserManager.prototype, {
         }.bind(this));
     }.bind(this));
     
-    return laserPics.map(_.identity);
+    return laserPics;
   },
   setLasers: function(conf){
     this._setLasers(conf);
@@ -267,8 +267,9 @@ _.assign(PrinterManager.prototype, {
     }
     this.port.write(gcode);
   },
-  _destroy: function(){
+  _destroy: function(cb){
     clearInterval(this._intervals.checkLocation);
+    this.port.close(cb);
   }
 });
 
@@ -334,12 +335,14 @@ if(program.listPorts){
     port: program.port,
     baud: program.baud,
     callback: function(){
-      lasers.ready().subscribe(function(){
-        printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera)
-          .subscribe(function(x){
-            console.log(x);
-          });
-      });
+      printer._home();
     }
   });
+  process.on('SIGINT', function() {
+    console.log("Caught interrupt signal, cleaning up");
+
+    printer._destroy(function(){
+      process.exit();
+    });
+});
 }
