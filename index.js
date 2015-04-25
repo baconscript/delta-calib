@@ -228,9 +228,17 @@ _.assign(PrinterManager.prototype, {
 
   // ### moveToPositionsAndTakeLaserPics :: (Rx.Observable<Position>, LaserManager, CameraManager) -> Rx.Observable<LaserPositionPic>
   moveToPositionsAndTakeLaserPics: function(positions, laserManager, cameraManager){
-    return positions.subscribe(function(pos){
-      this.moveTo(pos);
-    }.bind(this));
+    var pics = Rx.Subject.create();
+    var n = 0;
+    Rx.Observable.zip(positions.skip(1), pics, function(pos, pic){return pos})
+      .merge(positions.take(1))
+      .subscribe(function(pos){
+        this.moveTo(pos);
+        setTimeout(function(){
+          pics.push({pic: n++});
+        }, 3000);
+      }.bind(this));
+    return pics;
   },
   output: function(){
     return this._outputLines.map(_.identity);
