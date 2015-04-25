@@ -234,7 +234,7 @@ _.assign(PrinterManager.prototype, {
       .merge(positions.take(1))
       .flatMap(function(pos){
         return this.moveTo(pos);
-      }).subscribe(function(pos){
+      }.bind(this)).subscribe(function(pos){
         setTimeout(function(){
           pics.onNext({pos: pos, pic: n++});
         }, 3000);
@@ -261,9 +261,11 @@ _.assign(PrinterManager.prototype, {
     epsilon = epsilon || LOC_EPSILON;
     this._moveTo(desiredPosition);
     return this.location().map(function(actual){
-      return desiredPosition.distanceFrom(actual);
-    }).skipWhile(function(dist){
-      return dist > epsilon;
+      return {dist: desiredPosition.distanceFrom(actual), pos: actual};
+    }).skipWhile(function(d){
+      return d.dist > epsilon;
+    }).map(function(d){
+      return d.pos;
     }).take(1);
   },
   _home: function(){
