@@ -145,6 +145,7 @@ function PrinterManager(opts){
     baudrate: opts.baud
   }, false);
   this._outputLines = new Rx.Subject();
+  this._echo = new Rx.Subject();
   this.openPort(opts.callback || function(){});
 
   if(opts.log){
@@ -169,7 +170,7 @@ function PrinterManager(opts){
 
 _.assign(PrinterManager.prototype, {
 
-  // ### openPort :: () -> ()
+  // ### openPort :: ( (Error) -> () ) -> ()
   openPort: function(cb){
     this.port.open(function(err){
       if(err){
@@ -181,7 +182,7 @@ _.assign(PrinterManager.prototype, {
       setTimeout(function(){
         cb();
       }, 2000);
-      Rx.Observable.fromEvent(this.port, 'data')
+      var dataline = Rx.Observable.fromEvent(this.port, 'data')
 	.scan({events: [], buf: ''}, function(acc, x){
         acc = _.clone(acc);
 	var buff = acc.buf.toString() + x.toString();
@@ -192,9 +193,17 @@ _.assign(PrinterManager.prototype, {
         };
       }).flatMap(function(acc){
         return Rx.Observable.from(acc.events);
-      }).subscribe(function(line){
+      });
+
+      dataline.subscribe(function(line){
         this._outputLines.onNext(line);
-        if(program.verbose) console.log(' [DATA] >> '+line);
+        //if(program.verbose) console.log(' [DATA] >> '+line);
+      }.bind(this));
+
+      dataline.map(function(line){
+        return line.match(/echo:\s+/i)[0];
+      }).filter(_.identity).subscribe(function(echo){
+        this._echo.onNext(echo);
       }.bind(this));
     }.bind(this));
   },
@@ -253,6 +262,9 @@ _.assign(PrinterManager.prototype, {
   },
   location: function(){
     return this._location.map(_.identity);
+  },
+  echo: function(){
+    return this._echo.map(_.identity);
   },
 
   _moveTo: function(position){
@@ -350,6 +362,7 @@ if(program.listPorts){
     callback: function(){
       if(program.verbose) console.log('Connected to printer');
       printer.location().subscribe(console.log.bind(console,'LOCATION -->'));
+      printer.echo().subscribe(console.log.bind(console, '((ECHO)) '));
       printer._home();
     }
   });
