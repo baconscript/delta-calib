@@ -179,9 +179,6 @@ _.assign(PrinterManager.prototype, {
         err.printStackTrace();
         return;
       }
-      setTimeout(function(){
-        cb();
-      }, 2000);
       var dataline = Rx.Observable.fromEvent(this.port, 'data')
 	.scan({events: [], buf: ''}, function(acc, x){
         acc = _.clone(acc);
@@ -195,15 +192,17 @@ _.assign(PrinterManager.prototype, {
         return Rx.Observable.from(acc.events);
       });
 
+      dataline.take(1).subscribe(function(){cb()});
+
       dataline.subscribe(function(line){
         this._outputLines.onNext(line);
-        //if(program.verbose) console.log(' [DATA] >> '+line);
+        if(program.verbose) console.log(' [DATA] >> '+line);
       }.bind(this));
 
-      dataline.map(function(line){
-        return (line.match(/echo:\s+/i)||[])[0];
-      }).filter(_.identity).subscribe(function(echo){
-        this._echo.onNext(echo);
+      this.output().map(function(line){
+        return (line.match(/echo:\s*(.+)$/i)||[])[1];
+      }).filter(_.identity).subscribe(function(line){
+        this._echo.onNext(line);
       }.bind(this));
     }.bind(this));
   },
