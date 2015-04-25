@@ -126,7 +126,7 @@ _.assign(LaserManager.prototype, {
     return this._laserState.map(_.identity);
   },
   _destroy: function(){
-    return Rx.observable.merge(this.laserPins.flatMap(function(pin){
+    return Rx.Observable.merge(this.laserPins.flatMap(function(pin){
       return Rx.Observable.fromNodeCallback(gpio.close)(pin);
     })).map(_.constant(true)).takeLast(1);
   }
