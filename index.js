@@ -225,14 +225,11 @@ _.assign(PrinterManager.prototype, {
       this._location.onNext(location);
     }.bind(this));
   },
-  moveToPositionsAndTakeLaserPicsNew: function(positions, laserManager, cameraManager){
-
-  },
 
   // ### moveToPositionsAndTakeLaserPics :: (Rx.Observable<Position>, LaserManager, CameraManager) -> Rx.Observable<LaserPositionPic>
   moveToPositionsAndTakeLaserPics: function(positions, laserManager, cameraManager){
     // laserPics :: Rx.Observable<LaserPositionPic>
-    var laserPics = new Rx.Subject();
+    var laserPics = Rx.Subject.create();
 
     // Every time a new pic gets published, pull the next position from the queue.
     Rx.Observable
@@ -351,6 +348,12 @@ var headPositions = zHeads.map(function(z){
   return $V([0,0,z]);
 });
 
+function takeLaserPicsAtPositions(positionList, printer, lasers, camera){
+  var positions = Rx.Observable.from(positionList);
+  var pauser = Rx.Subject.create();
+  var laserPics = Rx.Subject.create();
+}
+
 if(program.listPorts){
   spp.list(function(err, ports){
     if(err){
@@ -366,22 +369,24 @@ if(program.listPorts){
   var lasers = new LaserManager({
     laserPins: LASER_PINS
   });
-  lasers.initialize().subscribe(function(){
+  var printerReady = Rx.Subject.create();
+  lasers.initialize().merge(printerReady).takeLast(1).subscribe(function(){
     lasers.setLasers({
       16: true,
       18: true,
       22: true
+    });
+    if(program.verbose) console.log('Connected to printer');
+    printer._home();
+    printer.moveTo($V([0,40,200])).subscribe(function(){
+      printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera);
     });
   });
   var printer = new PrinterManager({
     port: program.port,
     baud: program.baud,
     callback: function(){
-      if(program.verbose) console.log('Connected to printer');
-      printer._home();
-      printer.moveTo($V([0,40,200])).subscribe(function(){
-        printer._home();
-      });
+      printerReady.onNext('ok');
     }
   });
   process.on('SIGINT', function() {
