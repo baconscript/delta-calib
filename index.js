@@ -246,8 +246,13 @@ _.assign(PrinterManager.prototype, {
         // moved :: Rx.Observable<Position>
         var moved = this.moveTo(position);
 
+moved.subscribe(function(){
+  laserPics.onNext({intendedPosition: position, image: 'foo'});
+});
+return;
+
         // plainPix :: Rx.Observable<LaserPic>
-        var plainPix = laserManager.takeLaserPics(cameraManager, moved);
+        var plainPix = Rx.Observable.of('ok!');///laserManager.takeLaserPics(cameraManager, moved);
 
         // Link the images with the print head location.
         plainPix.subscribe(function(pic){
@@ -370,7 +375,7 @@ if(program.listPorts){
     laserPins: LASER_PINS
   });
   var printerReady = Rx.Subject.create();
-  lasers.initialize().merge(printerReady).takeLast(1).subscribe(function(){
+  Rx.Observable.zip(lasers.initialize(),printerReady,_.constant(true)).take(1).tap(function(){
     lasers.setLasers({
       16: true,
       18: true,
