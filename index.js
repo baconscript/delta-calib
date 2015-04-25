@@ -191,6 +191,7 @@ _.assign(PrinterManager.prototype, {
         return Rx.Observable.from(acc.events);
       }).subscribe(function(line){
         this._outputLines.onNext(line);
+        if(program.verbose) console.log(' [DATA] >> '+line);
       }.bind(this));
     }.bind(this));
     this._outputLines.filter(function(line){
@@ -262,6 +263,7 @@ _.assign(PrinterManager.prototype, {
     this._sendGcode('M114');
   },
   _sendGcode: function(gcode){
+    if(program.verbose) console.log(' [SEND] >> '+gcode);
     if(!(/\n$/.test(gcode))){
       gcode += '\n';
     }
@@ -335,6 +337,7 @@ if(program.listPorts){
     port: program.port,
     baud: program.baud,
     callback: function(){
+      if(program.verbose) console.log('Connected to printer');
       printer._home();
     }
   });
