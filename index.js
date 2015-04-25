@@ -204,7 +204,7 @@ _.assign(PrinterManager.prototype, {
     this._outputLines.map(function(line){
       return line.match(/X:(\d*(?:\.\d+)?) Y:(\d*(?:\.\d+)?) Z:(\d*(?:\.\d+)?)/);
     }).filter(_.identity).map(function(list){
-      return $V([+list[0], +list[1], +list[2]]);
+      return $V([+list[1], +list[2], +list[3]]);
     }).subscribe(function(location){
       this._location.onNext(location);
     }.bind(this));
