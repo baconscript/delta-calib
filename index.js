@@ -356,11 +356,10 @@ var printer;
         if(program.verbose) console.log('Connected to printer');
         printer._home();
 	    printer.moveTo($V([0,40,200])).subscribe(function(){
-	      printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera).subscribe(console.log.bind(console,'PIC'));
+	      printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera).subscribe(console.log.bind(console,'PIC'), function(){}, function(){printer._home()});
 	    });
       }
     });
-lasers.getLasers().subscribe(console.log.bind(console,'PEW PEW'));
     lasers.setLasers({
       16: true,
       18: true,
