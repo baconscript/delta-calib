@@ -19,9 +19,11 @@ function LaserManager(opts){
   this.laserPins = opts.laserPins;
   this._laserState = new Rx.Subject();
   this._laserStateRollup = this._laserState.scan({}, function(acc, x){
+    acc = _.clone(acc);
     _.keys(x).forEach(function(key){
       acc[key] = Boolean(x[key]);
     });
+    return acc;
   });
   this._write = Rx.Observable.fromNodeCallback(gpio.write);
 }
@@ -79,23 +81,33 @@ _.assign(LaserManager.prototype, {
     // an event in the output stream. I've got some conceptual work to do here.
 
     var pics = new Rx.Subject();
+var n = 0;
 
-    var laserSettings = Rx.Observable.from(([{}]).concat(this.laserPins.map(toOnLaserConfig)));
-    Rx.Observable.zip(laserSettings.skip(1), pics, function(set,pic){return set})
-      .merge(laserSettings.take(1))
-      .flatMap(function(setting){
-        return this.setLasers(setting);
-      }.bind(this)).subscribe(function(setting){
-        console.log(setting);
-        setTimeout(pics.onNext.bind(pics,'hi'), 500);
+
+    trigger.subscribe(function(/* don't care */){
+      var laserSettings = Rx.Observable.from(([{}]).concat(this.laserPins.map(toOnLaserConfig)));
+      var innerPix = new Rx.Subject();
+      Rx.Observable.zip(laserSettings.skip(1), innerPix, function(set,pic){return set})
+        .merge(laserSettings.take(1))
+        .flatMap(function(setting){
+          return this.setLasers(setting);
+        }.bind(this)).subscribe(function(setting){
+          console.log(setting);
+          setTimeout(innerPix.onNext.bind(innerPix,n++), 500);
+        }, function(err){
+          innerPix.onNext(err);
+        }, function(){innerPix.onCompleted()});
+      innerPix.reduce(function(acc, next){ return acc.concat([next])}, []).last().subscribe(function(pix){
+        pics.onNext(pix);
       });
+    }.bind(this));
     
     return pics;
   },
   setLasers: function(conf){
     this._setLasers(conf);
     return this.getLasers().skipWhile(function(actual){
-      return laserConfigsSame(conf, actual);
+      return !laserConfigsSame(conf, actual);
     }).take(1);
   },
   _setLasers: function(conf){
@@ -228,13 +240,9 @@ _.assign(PrinterManager.prototype, {
       .flatMap(function(pos){
         return this.moveTo(pos);
       }.bind(this));
-    laserManager.takeLaserPics(cameraManager, controlledPositions);
-/*.subscribe(function(pos){
-        setTimeout(function(){
-          pics.onNext({pos: pos, pic: n++});
-        }, 3000);
-      }.bind(this));*/
-    return pics;
+    var outpics = laserManager.takeLaserPics(cameraManager, controlledPositions);
+    outpics.subscribe(function(){ pics.onNext('ok') });
+    return outpics;
   },
   output: function(){
     return this._outputLines.map(_.identity);
@@ -355,9 +363,7 @@ var printer;
       callback: function(){
         if(program.verbose) console.log('Connected to printer');
         printer._home();
-	    printer.moveTo($V([0,40,200])).subscribe(function(){
-	      printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera).subscribe(console.log.bind(console,'PIC'), function(){}, function(){printer._home()});
-	    });
+        printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera).subscribe(console.log.bind(console,'PIC'), function(){}, function(){printer._home()});
       }
     });
     lasers.setLasers({
