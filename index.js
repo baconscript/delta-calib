@@ -105,7 +105,7 @@ _.assign(LaserManager.prototype, {
     this._setLasers(conf);
     return this.getLasers().takeWhile(function(actual){
       return !laserConfigsSame(conf, actual);
-    }).takeLast(1);
+    }).take(1);
   },
   _setLasers: function(conf){
     this.laserPins.forEach(function(pin){
@@ -275,16 +275,19 @@ _.assign(PrinterManager.prototype, {
   },
 
   _moveTo: function(position){
-    this._sendGcode("G0 "+_.range(1,3).map(function(i){return position.e(i)}).join(' '));
+var labels = ['','X','Y','Z'];
+    this._sendGcode("G0 "+_.range(1,4).map(function(i){return labels[i] + position.e(i)}).join(' '));
   },
 
   // ### moveTo :: (Position, Number) -> Rx.Observable<Position>
   moveTo: function(desiredPosition, epsilon){
     epsilon = epsilon || LOC_EPSILON;
     this._moveTo(desiredPosition);
-    return this.location().takeWhile(function(actual){
-      return desiredPosition.distanceFrom(actual) > epsilon;
-    }).takeLast(1);
+    return this.location().map(function(actual){
+      return desiredPosition.distanceFrom(actual);
+    }).skipWhile(function(dist){
+      return dist > epsilon;
+    }).take(1);
   },
   _home: function(){
     this._sendGcode("G28");
@@ -375,10 +378,10 @@ if(program.listPorts){
     baud: program.baud,
     callback: function(){
       if(program.verbose) console.log('Connected to printer');
-      printer.echo().subscribe(console.log.bind(console, '((ECHO))  '));
       printer._home();
-      printer.moveTo($V([0,40,80]));
-      printer._home();
+      printer.moveTo($V([0,40,200]).subscribe(function(pos){
+        printer._home();
+      });
     }
   });
   process.on('SIGINT', function() {
