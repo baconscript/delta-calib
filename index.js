@@ -377,6 +377,8 @@ if(program.listPorts){
       if(program.verbose) console.log('Connected to printer');
       printer.echo().subscribe(console.log.bind(console, '((ECHO))  '));
       printer._home();
+      printer.moveTo($V([0,40,80]));
+      printer._home();
     }
   });
   process.on('SIGINT', function() {
