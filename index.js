@@ -231,43 +231,6 @@ _.assign(PrinterManager.prototype, {
     return positions.subscribe(function(pos){
       this.moveTo(pos);
     }.bind(this));
-    // laserPics :: Rx.Observable<LaserPositionPic>
-    var laserPics = Rx.Subject.create();
-
-    // Every time a new pic gets published, pull the next position from the queue.
-    Rx.Observable
-
-      // Pair off each outgoing laser pic with an incoming position, but skip the first
-      // position since we will have already processed it by the time we get a pic.
-      // We get buffering "for free" since `zip` pairs off events from each stream and holds
-      // onto any events without a match.
-      .zip(laserPics, positions.skip(1), function(pic, position){return position;})
-
-      // Merge in the first position to kick off the process.
-      .merge(positions.take(1))
-      .subscribe(function(position){
-        // moved :: Rx.Observable<Position>
-        var moved = this.moveTo(position);
-
-        moved.subscribe(function(){
-          laserPics.onNext({intendedPosition: position, image: 'foo'});
-        });
-        return;
-
-        // plainPix :: Rx.Observable<LaserPic>
-        var plainPix = Rx.Observable.of('ok!');///laserManager.takeLaserPics(cameraManager, moved);
-
-        // Link the images with the print head location.
-        plainPix.subscribe(function(pic){
-          laserPics.onNext({intendedPosition: position, image: pic});
-        });
-
-        // After the image is published, the `zip` mechanism above will ensure that
-        // the next position gets pushed.
-      }.bind(this));
-
-    // Sneaky cast to Observable so we're not exposing the Subject.
-    return laserPics.map(_.identity);
   },
   output: function(){
     return this._outputLines.map(_.identity);
@@ -343,7 +306,7 @@ program
   //.option('-S, --sim', 'Use simulation (must use this if not on a Raspberry Pi)')
   .parse(process.argv);
 
-var zRange = program.zRange || [200,50];
+var zRange = program.zRange || [200,100];
 if(zRange[1] > zRange[0]) {
   zRange = [zRange[1], zRange[0]];
 }
@@ -378,24 +341,24 @@ if(program.listPorts){
     laserPins: LASER_PINS
   });
   var printerReady = Rx.Subject.create();
-  Rx.Observable.zip(lasers.initialize(),printerReady,_.constant(true)).take(1).tap(function(){
+var printer;
+  lasers.initialize().subscribe(function(){
+    printer = new PrinterManager({
+      port: program.port,
+      baud: program.baud,
+      callback: function(){
+        if(program.verbose) console.log('Connected to printer');
+        printer._home();
+	    printer.moveTo($V([0,40,200])).subscribe(function(){
+	      printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera);
+	    });
+      }
+    });
     lasers.setLasers({
       16: true,
       18: true,
       22: true
     });
-    if(program.verbose) console.log('Connected to printer');
-    printer._home();
-    printer.moveTo($V([0,40,200])).subscribe(function(){
-      printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera);
-    });
-  });
-  var printer = new PrinterManager({
-    port: program.port,
-    baud: program.baud,
-    callback: function(){
-      printerReady.onNext('ok');
-    }
   });
   process.on('SIGINT', function() {
     console.log("Caught interrupt signal, cleaning up");
