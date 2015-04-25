@@ -18,6 +18,11 @@ var NUM_INTRINSIC_PICS = 12;
 function LaserManager(opts){
   this.laserPins = opts.laserPins;
   this._laserState = new Rx.Subject();
+  this._laserStateRollup = this._laserState.scan({}, function(acc, x){
+    _.keys(x).forEach(function(key){
+      acc[key] = Boolean(x[key]);
+    });
+  });
   this._write = Rx.Observable.fromNodeCallback(gpio.write);
 }
 
@@ -75,7 +80,7 @@ _.assign(LaserManager.prototype, {
 
     var pics = new Rx.Subject();
 
-    var laserSettings = ([{}]).concat(this.laserPins.map(toOnLaserConfig));
+    var laserSettings = Rx.Observable.from(([{}]).concat(this.laserPins.map(toOnLaserConfig)));
     Rx.Observable.zip(laserSettings.skip(1), pics, function(set,pic){return set})
       .merge(laserSettings.take(1))
       .flatMap(function(setting){
@@ -89,8 +94,8 @@ _.assign(LaserManager.prototype, {
   },
   setLasers: function(conf){
     this._setLasers(conf);
-    return this.getLasers().takeWhile(function(actual){
-      return !laserConfigsSame(conf, actual);
+    return this.getLasers().skipWhile(function(actual){
+      return laserConfigsSame(conf, actual);
     }).take(1);
   },
   _setLasers: function(conf){
@@ -99,12 +104,14 @@ _.assign(LaserManager.prototype, {
       var value = conf[pin]? 1: 0;
       var writes = this._write(pin, value).map(function(){
         return toLaserConfig(pin, value);
-      });
+      }).subscribe(function(config){
+        this._laserState.onNext(config);
+      }.bind(this));
 
-      Rx.Observable.zip(writes, this._laserState.sample(writes), mergeLaserState)
-        .subscribe(function(state){
-          this._laserState.onNext(state);
-        });
+      //Rx.Observable.zip(writes, this._laserState.sample(writes), mergeLaserState)
+        //.subscribe(function(state){
+          //this._laserState.onNext(state);
+        //});
 
     }.bind(this));
   },
@@ -114,14 +121,6 @@ _.assign(LaserManager.prototype, {
   _destroy: function(){
     return Rx.Observable.merge(Rx.Observable.from(this.laserPins).flatMap(function(pin){
       return Rx.Observable.fromNodeCallback(gpio.close)(pin);
-  cycleLasers: function(){
-    var lasers = Rx.Observable.from(this.laserPins).map(function(pin){
-      var x = {};
-      x[pin] = true;
-      return x;
-    });
-
-  },
     })).map(_.constant(true)).takeLast(1);
   }
 });
@@ -224,15 +223,17 @@ _.assign(PrinterManager.prototype, {
   moveToPositionsAndTakeLaserPics: function(positions, laserManager, cameraManager){
     var pics = new Rx.Subject();
     var n = 0;
-    Rx.Observable.zip(positions.skip(1), pics, function(pos, pic){return pos})
+    var controlledPositions = Rx.Observable.zip(positions.skip(1), pics, function(pos, pic){return pos})
       .merge(positions.take(1))
       .flatMap(function(pos){
         return this.moveTo(pos);
-      }.bind(this)).subscribe(function(pos){
+      }.bind(this));
+    laserManager.takeLaserPics(cameraManager, controlledPositions);
+/*.subscribe(function(pos){
         setTimeout(function(){
           pics.onNext({pos: pos, pic: n++});
         }, 3000);
-      }.bind(this));
+      }.bind(this));*/
     return pics;
   },
   output: function(){
@@ -359,6 +360,7 @@ var printer;
 	    });
       }
     });
+lasers.getLasers().subscribe(console.log.bind(console,'PEW PEW'));
     lasers.setLasers({
       16: true,
       18: true,
