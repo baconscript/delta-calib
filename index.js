@@ -183,7 +183,7 @@ function PrinterManager(opts){
 
 _.assign(PrinterManager.prototype, {
 
-  // ### openPort :: ( (Error) -> () ) -> ()
+  // ### openPort :: ( cb :: ( (Error) -> () ) ) -> ()
   openPort: function(cb){
     this.port.open(function(err){
       if(err){
