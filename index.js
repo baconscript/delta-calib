@@ -178,7 +178,9 @@ _.assign(PrinterManager.prototype, {
         err.printStackTrace();
         return;
       }
-      cb();
+      setTimeout(function(){
+        cb();
+      }, 2000);
       Rx.Observable.fromEvent(this.port, 'data')
 	.scan({events: [], buf: ''}, function(acc, x){
         acc = _.clone(acc);
@@ -195,8 +197,6 @@ _.assign(PrinterManager.prototype, {
         if(program.verbose) console.log(' [DATA] >> '+line);
       }.bind(this));
     }.bind(this));
-    this._outputLines.filter(function(line){
-    });
   },
 
   moveToPositionsAndTakeLaserPicsNew: function(positions, laserManager, cameraManager){
@@ -339,9 +339,7 @@ if(program.listPorts){
     baud: program.baud,
     callback: function(){
       if(program.verbose) console.log('Connected to printer');
-      setTimeout(function(){
-        printer._home();
-      }, 2000);
+      printer._home();
     }
   });
   process.on('SIGINT', function() {
