@@ -201,7 +201,7 @@ _.assign(PrinterManager.prototype, {
       }.bind(this));
 
       dataline.map(function(line){
-        return line.match(/echo:\s+/i)[0];
+        return (line.match(/echo:\s+/i)||[])[0];
       }).filter(_.identity).subscribe(function(echo){
         this._echo.onNext(echo);
       }.bind(this));
