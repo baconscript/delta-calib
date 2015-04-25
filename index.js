@@ -78,8 +78,6 @@ _.assign(LaserManager.prototype, {
     trigger.subscribe(function(/* ignore stream value */){
       var laserSettings = ([{}]).concat(this.laserPins.map(toOnLaserConfig));
       var lasers = Rx.Observable.from(laserSettings);
-      var pics = Rx.Subject();
-      var lasersQueue = Rx.Subject.create();
       Rx.Observable
         .zip(pics, lasers.skip(1), function(pic, laser){return laser;})
         .merge(lasers.take(1))
@@ -94,7 +92,7 @@ _.assign(LaserManager.prototype, {
           Rx.Observable
             .zip(laserSet, plainPix, function(laserSet, plainPic){
               return {laser: getOnLaser(laserSet), image: plainPic};
-            }).do(function(lpic){
+            }).subscribe(function(lpic){
               laserPics.onNext(lpic);
             });
 
@@ -197,6 +195,10 @@ _.assign(PrinterManager.prototype, {
     }.bind(this));
     this._outputLines.filter(function(line){
     });
+  },
+
+  moveToPositionsAndTakeLaserPicsNew: function(positions, laserManager, cameraManager){
+
   },
 
   // ### moveToPositionsAndTakeLaserPics :: (Rx.Observable<Position>, LaserManager, CameraManager) -> Rx.Observable<LaserPositionPic>
