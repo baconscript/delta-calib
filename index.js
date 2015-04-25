@@ -379,7 +379,7 @@ if(program.listPorts){
     callback: function(){
       if(program.verbose) console.log('Connected to printer');
       printer._home();
-      printer.moveTo($V([0,40,200]).subscribe(function(pos){
+      printer.moveTo($V([0,40,200])).subscribe(function(){
         printer._home();
       });
     }
