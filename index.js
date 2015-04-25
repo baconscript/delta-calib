@@ -97,7 +97,9 @@ var n = 0;
         }, function(err){
           innerPix.onNext(err);
         }, function(){innerPix.onCompleted()});
-      innerPix.reduce(function(acc, next){ return acc.concat([next])}, []).last().subscribe(pics);
+      innerPix.reduce(function(acc, next){ return acc.concat([next])}, []).last().subscribe(function(pix){
+        pics.onNext(pix);
+      });
     }.bind(this));
     
     return pics;
@@ -114,7 +116,14 @@ var n = 0;
       var value = conf[pin]? 1: 0;
       var writes = this._write(pin, value).map(function(){
         return toLaserConfig(pin, value);
-      }).subscribe(this._laserState);
+      }).subscribe(function(config){
+        this._laserState.onNext(config);
+      }.bind(this));
+
+      //Rx.Observable.zip(writes, this._laserState.sample(writes), mergeLaserState)
+        //.subscribe(function(state){
+          //this._laserState.onNext(state);
+        //});
 
     }.bind(this));
   },
@@ -198,11 +207,16 @@ _.assign(PrinterManager.prototype, {
 
       dataline.take(1).subscribe(function(){cb()});
 
-      dataline.subscribe(this._outputLines);
+      dataline.subscribe(function(line){
+        this._outputLines.onNext(line);
+        if(program.verbose) console.log(' [DATA] >> '+line);
+      }.bind(this));
 
       this.output().map(function(line){
         return (line.match(/echo:\s*(.+)$/i)||[])[1];
-      }).filter(_.identity).subscribe(this._echo);
+      }).filter(_.identity).subscribe(function(line){
+        this._echo.onNext(line);
+      }.bind(this));
     }.bind(this));
   },
 
@@ -212,7 +226,9 @@ _.assign(PrinterManager.prototype, {
       return line.match(/X:(\d*(?:\.\d+)?) Y:(\d*(?:\.\d+)?) Z:(\d*(?:\.\d+)?)/);
     }).filter(_.identity).map(function(list){
       return $V([+list[1], +list[2], +list[3]]);
-    }).subscribe(this._location);
+    }).subscribe(function(location){
+      this._location.onNext(location);
+    }.bind(this));
   },
 
   // ### moveToPositionsAndTakeLaserPics :: (Rx.Observable<Position>, LaserManager, CameraManager) -> Rx.Observable<LaserPositionPic>
@@ -225,7 +241,7 @@ _.assign(PrinterManager.prototype, {
         return this.moveTo(pos);
       }.bind(this));
     var outpics = laserManager.takeLaserPics(cameraManager, controlledPositions);
-    outpics.subscribe(pics);
+    outpics.subscribe(function(){ pics.onNext('ok') });
     return outpics;
   },
   output: function(){
