@@ -126,7 +126,7 @@ _.assign(LaserManager.prototype, {
     return this._laserState.map(_.identity);
   },
   _destroy: function(){
-    return Rx.Observable.merge(this.laserPins.flatMap(function(pin){
+    return Rx.Observable.merge(Rx.Observable.from(this.laserPins).flatMap(function(pin){
       return Rx.Observable.fromNodeCallback(gpio.close)(pin);
     })).map(_.constant(true)).takeLast(1);
   }
@@ -366,7 +366,8 @@ if(program.listPorts){
   lasers.initialize().subscribe(function(){
     lasers.setLasers({
       16: true,
-      18: true
+      18: true,
+      22: true
     });
   });
   var printer = new PrinterManager({
