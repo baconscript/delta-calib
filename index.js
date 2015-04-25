@@ -151,7 +151,7 @@ function PrinterManager(opts){
     this._outputLines.tap(console.log.bind(console));
   }
 
-  this.checkLocationInterval = opts.checkLocationInterval || 500;
+  this.checkLocationInterval = opts.checkLocationInterval || 2000;
   this._intervals = {};
   this._intervals.checkLocation = setInterval(
       this._checkLocation.bind(this), this.checkLocationInterval);
@@ -338,7 +338,7 @@ if(program.listPorts){
     baud: program.baud,
     callback: function(){
       if(program.verbose) console.log('Connected to printer');
-      printer._home();
+      //printer._home();
     }
   });
   process.on('SIGINT', function() {
