@@ -73,33 +73,19 @@ _.assign(LaserManager.prototype, {
     // one value at a time and will not produce a new value until we've produced
     // an event in the output stream. I've got some conceptual work to do here.
 
-    var laserPics = new Rx.Subject();
+    var pics = new Rx.Subject();
 
-    trigger.subscribe(function(/* ignore stream value */){
-      var laserSettings = ([{}]).concat(this.laserPins.map(toOnLaserConfig));
-      var lasers = Rx.Observable.from(laserSettings);
-      Rx.Observable
-        .zip(pics, lasers.skip(1), function(pic, laser){return laser;})
-        .merge(lasers.take(1))
-        .subscribe(function(laserConf){
-
-          // laserSet :: Rx.Observable<LaserConfig>
-          var laserSet = this.setLasers(laserConf);
-
-          // plainPix :: Rx.Observable<Image>
-          var plainPix = cameraManager.capture(laserSet);
-
-          Rx.Observable
-            .zip(laserSet, plainPix, function(laserSet, plainPic){
-              return {laser: getOnLaser(laserSet), image: plainPic};
-            }).subscribe(function(lpic){
-              laserPics.onNext(lpic);
-            });
-
-        }.bind(this));
-    }.bind(this));
+    var laserSettings = ([{}]).concat(this.laserPins.map(toOnLaserConfig));
+    Rx.Observable.zip(laserSettings.skip(1), pics, function(set,pic){return set})
+      .merge(laserSettings.take(1))
+      .flatMap(function(setting){
+        return this.setLasers(setting);
+      }.bind(this)).subscribe(function(setting){
+        console.log(setting);
+        setTimeout(pics.onNext.bind(pics,'hi'), 500);
+      });
     
-    return laserPics;
+    return pics;
   },
   setLasers: function(conf){
     this._setLasers(conf);
@@ -128,6 +114,14 @@ _.assign(LaserManager.prototype, {
   _destroy: function(){
     return Rx.Observable.merge(Rx.Observable.from(this.laserPins).flatMap(function(pin){
       return Rx.Observable.fromNodeCallback(gpio.close)(pin);
+  cycleLasers: function(){
+    var lasers = Rx.Observable.from(this.laserPins).map(function(pin){
+      var x = {};
+      x[pin] = true;
+      return x;
+    });
+
+  },
     })).map(_.constant(true)).takeLast(1);
   }
 });
