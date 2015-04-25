@@ -199,7 +199,7 @@ _.assign(PrinterManager.prototype, {
     }.bind(this));
   },
 
-  setUpLocation: function(){
+  _setUpLocation: function(){
     this._location = new Rx.Subject();
     this._output.map(function(line){
       return line.match(/X:(\d*(?:\.\d+)?) Y:(\d*(?:\.\d+)?) Z:(\d*(?:\.\d+)?)/);
