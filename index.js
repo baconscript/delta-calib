@@ -18,14 +18,6 @@ var NUM_INTRINSIC_PICS = 12;
 function LaserManager(opts){
   this.laserPins = opts.laserPins;
   this._laserState = new Rx.Subject();
-  this.ready = function(){
-    var openPin = Rx.Observable.fromNodeCallback(gpio.open);
-    var done = Rx.Observable.from(this.laserPins).flatMap(function(pin){
-      console.log('Opening '+pin);
-      return openPin(pin, 'output');
-    }).last();
-    return done;
-  }.bind(this);
   this._write = Rx.Observable.fromNodeCallback(gpio.write);
 }
 
@@ -67,6 +59,14 @@ function mergeLaserState(oldState, newState){
 }
 
 _.assign(LaserManager.prototype, {
+  initialize: function(){
+    var openPin = Rx.Observable.fromNodeCallback(gpio.open);
+    var done = Rx.Observable.from(this.laserPins).flatMap(function(pin){
+      if(program.verbose) console.log(' [LASER] Opening '+pin);
+      return openPin(pin, 'output');
+    }).last();
+    return done;
+  },
   // ### takeLaserPics :: (CameraManager, Rx.Observable<Any>) -> Rx.Observable<LaserPic>
   takeLaserPics: function(cameraManager, trigger){
     // Giant leap of faith here: we're assuming that `trigger` will produce exactly
@@ -355,13 +355,18 @@ if(program.listPorts){
   var lasers = new LaserManager({
     laserPins: LASER_PINS
   });
+  lasers.initialize().subscribe(function(){
+    lasers.setLasers({
+      16: true,
+      18: true
+    });
+  });
   var printer = new PrinterManager({
     port: program.port,
     baud: program.baud,
     callback: function(){
       if(program.verbose) console.log('Connected to printer');
-      printer.location().subscribe(console.log.bind(console,'LOCATION -->'));
-      printer.echo().subscribe(console.log.bind(console, '((ECHO)) '));
+      printer.echo().subscribe(console.log.bind(console, '((ECHO))  '));
       printer._home();
     }
   });
