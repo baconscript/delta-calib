@@ -155,7 +155,7 @@ function PrinterManager(opts){
   this._intervals = {};
   this._intervals.checkLocation = setInterval(
       this._checkLocation.bind(this), this.checkLocationInterval);
-  this._location = new Rx.Subject();
+  this._setUpLocation();
 }
 
 /*
@@ -199,6 +199,16 @@ _.assign(PrinterManager.prototype, {
     }.bind(this));
   },
 
+  setUpLocation: function(){
+    this._location = new Rx.Subject();
+    this._output.map(function(line){
+      return line.match(/X:(\d*(?:\.\d+)?) Y:(\d*(?:\.\d+)?) Z:(\d*(?:\.\d+)?)/);
+    }).filter(_.identity).map(function(list){
+      return $V([+list[0], +list[1], +list[2]]);
+    }).subscribe(function(location){
+      this._location.push(location);
+    }.bind(this));
+  },
   moveToPositionsAndTakeLaserPicsNew: function(positions, laserManager, cameraManager){
 
   },
@@ -339,6 +349,7 @@ if(program.listPorts){
     baud: program.baud,
     callback: function(){
       if(program.verbose) console.log('Connected to printer');
+      printer.location().subscribe(console.log.bind(console,'LOCATION -->'));
       printer._home();
     }
   });
