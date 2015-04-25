@@ -73,7 +73,7 @@ _.assign(LaserManager.prototype, {
     // one value at a time and will not produce a new value until we've produced
     // an event in the output stream. I've got some conceptual work to do here.
 
-    var laserPics = Rx.Subject.create();
+    var laserPics = new Rx.Subject();
 
     trigger.subscribe(function(/* ignore stream value */){
       var laserSettings = ([{}]).concat(this.laserPins.map(toOnLaserConfig));
@@ -137,7 +137,7 @@ function CameraManager(opts){
 
 _.assign(CameraManager.prototype, {
   capture: function(trigger){
-    var caps = Rx.Subject.create();
+    var caps = new Rx.Subject();
     setTimeout(function(){
       caps.onNext("Click!");
     }, 1000);
@@ -228,14 +228,14 @@ _.assign(PrinterManager.prototype, {
 
   // ### moveToPositionsAndTakeLaserPics :: (Rx.Observable<Position>, LaserManager, CameraManager) -> Rx.Observable<LaserPositionPic>
   moveToPositionsAndTakeLaserPics: function(positions, laserManager, cameraManager){
-    var pics = Rx.Subject.create();
+    var pics = new Rx.Subject();
     var n = 0;
     Rx.Observable.zip(positions.skip(1), pics, function(pos, pic){return pos})
       .merge(positions.take(1))
       .subscribe(function(pos){
         this.moveTo(pos);
         setTimeout(function(){
-          pics.push({pic: n++});
+          pics.onNext({pic: n++});
         }, 3000);
       }.bind(this));
     return pics;
@@ -329,8 +329,8 @@ var headPositions = zHeads.map(function(z){
 
 function takeLaserPicsAtPositions(positionList, printer, lasers, camera){
   var positions = Rx.Observable.from(positionList);
-  var pauser = Rx.Subject.create();
-  var laserPics = Rx.Subject.create();
+  var pauser = new Rx.Subject();
+  var laserPics = new Rx.Subject();
 }
 
 if(program.listPorts){
@@ -348,7 +348,7 @@ if(program.listPorts){
   var lasers = new LaserManager({
     laserPins: LASER_PINS
   });
-  var printerReady = Rx.Subject.create();
+  var printerReady = new Rx.Subject();
 var printer;
   lasers.initialize().subscribe(function(){
     printer = new PrinterManager({
