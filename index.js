@@ -116,7 +116,7 @@ _.assign(LaserManager.prototype, {
     }.bind(this));
   },
   getLasers: function(){
-    return this._laserState.map(_.identity);
+    return this._laserStateRollup.map(_.identity);
   },
   _destroy: function(){
     return Rx.Observable.merge(Rx.Observable.from(this.laserPins).flatMap(function(pin){
