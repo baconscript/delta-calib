@@ -232,10 +232,11 @@ _.assign(PrinterManager.prototype, {
     var n = 0;
     Rx.Observable.zip(positions.skip(1), pics, function(pos, pic){return pos})
       .merge(positions.take(1))
-      .subscribe(function(pos){
-        this.moveTo(pos);
+      .flatMap(function(pos){
+        return this.moveTo(pos);
+      }).subscribe(function(pos){
         setTimeout(function(){
-          pics.onNext({pic: n++});
+          pics.onNext({pos: pos, pic: n++});
         }, 3000);
       }.bind(this));
     return pics;
@@ -251,8 +252,8 @@ _.assign(PrinterManager.prototype, {
   },
 
   _moveTo: function(position){
-var labels = ['','X','Y','Z'];
-    this._sendGcode("G0 "+_.range(1,4).map(function(i){return labels[i] + position.e(i)}).join(' '));
+    var labels = ['','X','Y','Z'];
+    this._sendGcode("G0 "+([1,2,3]).map(function(i){return labels[i] + position.e(i)}).join(' '));
   },
 
   // ### moveTo :: (Position, Number) -> Rx.Observable<Position>
@@ -358,7 +359,7 @@ var printer;
         if(program.verbose) console.log('Connected to printer');
         printer._home();
 	    printer.moveTo($V([0,40,200])).subscribe(function(){
-	      printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera);
+	      printer.moveToPositionsAndTakeLaserPics(headPositions, lasers, camera).subscribe(console.log.bind(console,'PIC'));
 	    });
       }
     });
