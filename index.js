@@ -124,6 +124,11 @@ _.assign(LaserManager.prototype, {
   },
   getLasers: function(){
     return this._laserState.map(_.identity);
+  },
+  _destroy: function(){
+    return Rx.observable.merge(this.laserPins.flatMap(function(pin){
+      return Rx.Observable.fromNodeCallback(gpio.close)(pin);
+    })).map(_.constant(true)).takeLast(1);
   }
 });
 
@@ -377,7 +382,9 @@ if(program.listPorts){
     console.log("Caught interrupt signal, cleaning up");
 
     printer._destroy(function(){
-      process.exit();
+      lasers._destroy().subscribe(function(){
+        process.exit();
+      });
     });
 });
 }
