@@ -179,10 +179,11 @@ _.assign(PrinterManager.prototype, {
         return;
       }
       cb();
-      Rx.Observable.fromEvent(this.port, 'data').scan({events: [], buf: ''}, function(acc, x){
+      Rx.Observable.fromEvent(this.port, 'data')
+	.scan({events: [], buf: ''}, function(acc, x){
         acc = _.clone(acc);
-        acc.buf += x;
-        var lines = acc.buf.split('\n').filter(_.identity);
+	var buff = acc.buf.toString() + x.toString();
+        var lines = buff.split(/\n/g);
         return {
           events: lines.slice(0,lines.length-1),
           buf: lines[lines.length-1] || ''
@@ -338,7 +339,9 @@ if(program.listPorts){
     baud: program.baud,
     callback: function(){
       if(program.verbose) console.log('Connected to printer');
-      //printer._home();
+      setTimeout(function(){
+        printer._home();
+      }, 2000);
     }
   });
   process.on('SIGINT', function() {
