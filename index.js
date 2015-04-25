@@ -228,6 +228,9 @@ _.assign(PrinterManager.prototype, {
 
   // ### moveToPositionsAndTakeLaserPics :: (Rx.Observable<Position>, LaserManager, CameraManager) -> Rx.Observable<LaserPositionPic>
   moveToPositionsAndTakeLaserPics: function(positions, laserManager, cameraManager){
+    return positions.subscribe(function(pos){
+      this.moveTo(pos);
+    }.bind(this));
     // laserPics :: Rx.Observable<LaserPositionPic>
     var laserPics = Rx.Subject.create();
 
@@ -246,10 +249,10 @@ _.assign(PrinterManager.prototype, {
         // moved :: Rx.Observable<Position>
         var moved = this.moveTo(position);
 
-moved.subscribe(function(){
-  laserPics.onNext({intendedPosition: position, image: 'foo'});
-});
-return;
+        moved.subscribe(function(){
+          laserPics.onNext({intendedPosition: position, image: 'foo'});
+        });
+        return;
 
         // plainPix :: Rx.Observable<LaserPic>
         var plainPix = Rx.Observable.of('ok!');///laserManager.takeLaserPics(cameraManager, moved);
