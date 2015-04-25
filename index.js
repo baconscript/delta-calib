@@ -201,12 +201,12 @@ _.assign(PrinterManager.prototype, {
 
   _setUpLocation: function(){
     this._location = new Rx.Subject();
-    this._output.map(function(line){
+    this._outputLines.map(function(line){
       return line.match(/X:(\d*(?:\.\d+)?) Y:(\d*(?:\.\d+)?) Z:(\d*(?:\.\d+)?)/);
     }).filter(_.identity).map(function(list){
       return $V([+list[0], +list[1], +list[2]]);
     }).subscribe(function(location){
-      this._location.push(location);
+      this._location.onNext(location);
     }.bind(this));
   },
   moveToPositionsAndTakeLaserPicsNew: function(positions, laserManager, cameraManager){
