@@ -121,6 +121,9 @@ _.assign(LaserManager.prototype, {
         });
 
     }.bind(this));
+  },
+  getLasers: function(){
+    return this._laserState.map(_.identity);
   }
 });
 
