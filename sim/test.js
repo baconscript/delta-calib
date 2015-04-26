@@ -15,9 +15,18 @@ var lasers = new LaserMount({
 var scene = new Scene({
   lasers: lasers,
   board: board,
-  position: $V([0,1,0.01])
+  cameraPosition: $V([2,-2,1]),
+  lookAt: Scene.ORIGIN
 });
 
+scene = Scene.mkRandom();
+
 scene.renderToFile(function(err, fnm){
-  console.log('Rendered out to '+fnm);
+  if(err){
+    err.printStackTrace();
+    console.error(err);
+    process.exit(1);
+    return;
+  }
+  console.log(fnm);
 });

@@ -4,7 +4,7 @@ box {
     pigment {
       checker
       color rgb<1,1,1>
-      color rgb<0.2,0.2,0.2>
+      color rgb<0.5,0.5,0.5>
     } scale <%- scale %>
   }
 }

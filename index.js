@@ -317,7 +317,7 @@ program
   .option('-i, --intrinsic-pics <value>', 'Set number of images to take before calculating intrinsics', Number)
   .option('-v, --verbose', 'Verbose mode')
   //.option('-I, --intrinsic-matrix <filename>', "Don't calculate intrinsics; instead load from file")
-  //.option('-S, --sim', 'Use simulation (must use this if not on a Raspberry Pi)')
+  .option('-S, --sim', 'Use simulation (must use this if not on a Raspberry Pi)')
   .parse(process.argv);
 
 var zRange = program.zRange || [200,100];
@@ -348,6 +348,7 @@ if(program.listPorts){
       console.log(port.comName);
     });
   });
+} else if(program.sim) {
 } else {
   var camera = new CameraManager({
   });

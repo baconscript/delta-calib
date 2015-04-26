@@ -9,10 +9,10 @@ background { color rgb <0.005, 0.005, 0.005> }
 
 //------------------------------------------
 // camera ----------------------------------
-camera{ location  <0.0 , 1.0 ,-3.0>
-        look_at   <0.0 , 1.0 , 0.0>
+camera{ location  <<%- -cam.e(1) %>, <%- cam.e(3) %>, <%- cam.e(2) %>>
+        look_at   <<%- -lookAt.e(1) %>, <%- lookAt.e(3) %>, <%- lookAt.e(2) %>>
         right -x*image_width/image_height
-        angle 75 }
+        angle <%- fov %> }
 
 // sun -------------------------------------
     light_source{<1500,3000,-2500> color White}
