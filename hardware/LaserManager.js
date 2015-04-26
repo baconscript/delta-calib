@@ -51,14 +51,15 @@ function mergeLaserState(oldState, newState){
   return _.defaults(_.clone(newState), oldState);
 }
 
+LaserManager.laserConfigsSame = laserConfigsSame;
+LaserManager.getOnLaser = getOnLaser;
+LaserManager.toLaserConfig = toLaserConfig;
+LaserManager.toOnLaserConfig = toOnLaserConfig;
+LaserManager.mergeLaserState = mergeLaserState;
+
+
 _.assign(LaserManager.prototype, {
   initialize: function(){
-    var openPin = Rx.Observable.fromNodeCallback(gpio.open);
-    var done = Rx.Observable.from(this.laserPins).flatMap(function(pin){
-      if(program.verbose) console.log(' [LASER] Opening '+pin);
-      return openPin(pin, 'output');
-    }).last();
-    return done;
   },
   // ### takeLaserPics :: (CameraManager, Rx.Observable<Any>) -> Rx.Observable<LaserPic>
   takeLaserPics: function(cameraManager, trigger){
@@ -105,21 +106,14 @@ var n = 0;
       }).subscribe(function(config){
         this._laserState.onNext(config);
       }.bind(this));
-
-      //Rx.Observable.zip(writes, this._laserState.sample(writes), mergeLaserState)
-        //.subscribe(function(state){
-          //this._laserState.onNext(state);
-        //});
-
     }.bind(this));
   },
   getLasers: function(){
     return this._laserStateRollup.map(_.identity);
   },
   _destroy: function(){
-    return Rx.Observable.merge(Rx.Observable.from(this.laserPins).flatMap(function(pin){
-      return Rx.Observable.fromNodeCallback(gpio.close)(pin);
-    })).map(_.constant(true)).takeLast(1);
   }
 });
 
+
+module.exports = LaserManager;
