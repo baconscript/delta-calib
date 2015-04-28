@@ -2,9 +2,9 @@ light_source {
   y*5, Red * 100
   cylinder
   point_at <0,0,-1>
-  radius 0.01
-  falloff 0.02
-  tightness 0.025
+  radius <%- beamWidth %>
+  falloff <%- beamWidth/2 %>
+  tightness 0
   photons {
     reflection on
     refraction on

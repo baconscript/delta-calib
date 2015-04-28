@@ -16,10 +16,15 @@ function Scene(opts){
   this.imageWidth = opts.imageWidth || 1024;
   this.imageHeight = opts.imageHeight || 768;
   this.lookAt = opts.lookAt || Scene.ORIGIN;
+  this.laserStates = opts.laserStates || {};
 }
 
-Scene.header = _.template(fs.readFileSync('sceneHeader.tpl'));
+Scene.header = _.template(fs.readFileSync(path.join(__dirname,'sceneHeader.tpl')));
 Scene.ORIGIN = $V([0,0,0]);
+
+Scene.mktmp = function(){
+  return path.join(os.tmpdir(), uuid.v4());
+}
 
 _.assign(Scene.prototype, {
   toPOVRay: function(){
@@ -29,18 +34,18 @@ _.assign(Scene.prototype, {
         fov: this.fov,
         lookAt: this.lookAt
       }),
-      this.lasers ? this.lasers.toPOVRay(this.position).join('\n') : '',
+      this.lasers ? this.lasers.toPOVRay(this.position, this.laserStates).join('\n') : '',
       this.board.toPOVRay()
     ].join('\n');
   },
   renderToFile: function(cb){
     var src = this.toPOVRay();
-    var fnm = path.join(os.tmpdir(), uuid.v4());
+    var fnm = Scene.mktmp();
     var srcFnm = fnm+'.pov';
     var imgFnm = fnm+'.png';
     var cmd = [
-      'povray', 
-      '+O"'+imgFnm+'"', 
+      'povray',
+      '+O"'+imgFnm+'"',
       '+W'+this.imageWidth,
       '+H'+this.imageHeight,
       '-D', srcFnm];
@@ -61,9 +66,9 @@ Scene.mkRandom = function(opts){
     numSquares: 12
   });
   var rando = $V([
-      Math.random()*10-5,
-      Math.random()*10-5,
-      6
+      (Math.random()-0.5)*board.edgeLength,
+      (Math.random()-0.5)*board.edgeLength,
+      board.edgeLength*2
     ]);
   return new Scene(_.defaults(opts,{
     board: board,

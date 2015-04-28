@@ -11,7 +11,6 @@ function LaserManager(opts){
     });
     return acc;
   });
-  this._write = Rx.Observable.fromNodeCallback(gpio.write);
 }
 
 /* ```
@@ -88,7 +87,7 @@ var n = 0;
         pics.onNext(pix);
       });
     }.bind(this));
-    
+
     return pics;
   },
   setLasers: function(conf){
@@ -112,7 +111,11 @@ var n = 0;
     return this._laserStateRollup.map(_.identity);
   },
   _destroy: function(){
+  },
+  _write: function(pin, level){
+    throw new Error("Must override LaserManager._write(pin, level) in "+this.constructor.name);
   }
+
 });
 
 

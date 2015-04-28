@@ -1,17 +1,22 @@
 var LaserManager = require('./LaserManager');
-var gpio = require('pi-gpio');
 var Rx = require('rx');
 var _ = require('lodash');
+var sh = require('shelljs').exec();
+var Scene = require('../sim/scene');
 
-function GpioLaserManager(opts){
+function POVRayLaserManager(opts){
   // connect the LaserManager behavior
   LaserManager.apply(this, arguments);
   // override the write behavior
-  this._write = Rx.Observable.fromNodeCallback(gpio.write);
+  this._pinStates = {};
 }
 
-_.assign(GpioLaserManager.prototype, {
-  initialize: function(){
+_.assign(POVRayLaserManager.prototype, {
+  initialize: function(opts){
+    opts = opts || {};
+    if(!opts.scene){
+      throw new Error("Need to pass a Scene into POVRayLaserManager");
+    }
     LaserManager.initialize.apply(this,arguments);
     var openPin = Rx.Observable.fromNodeCallback(gpio.open);
     var done = Rx.Observable.from(this.laserPins).flatMap(function(pin){
@@ -19,12 +24,12 @@ _.assign(GpioLaserManager.prototype, {
     }).last();
     return done;
   },
-  _write: Rx.Observable.fromNodeCallback(gpio.write),
+  _write: function(pin, level){
+    this._pinStates[pin] = level;
+    return Rx.Observable.of(this._pinStates);
+  },
   _destroy: function(){
-    return Rx.Observable.merge(Rx.Observable.from(this.laserPins).flatMap(function(pin){
-      return Rx.Observable.fromNodeCallback(gpio.close)(pin);
-    })).map(_.constant(true)).takeLast(1);
   }
 });
 
-module.exports = GpioLaserManager;
+module.exports = POVRayLaserManager;

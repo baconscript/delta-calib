@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     return 0;
   }
   cv::FileStorage file(argv[4], cv::FileStorage::WRITE);
-  file << "squareSize" << std::stoi(argv[1]);
+  file << "squareSize" << std::stof(argv[1]);
   file << "width" << std::stoi(argv[2]);
   file << "height" << std::stoi(argv[3]);
   file.release();

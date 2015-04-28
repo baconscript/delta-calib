@@ -1,13 +1,14 @@
 require('sylvester');
-_ = require('lodash');
-fs = require('fs');
+var _ = require('lodash');
+var fs = require('fs');
+var path = require('path');
 
 function Chessboard(opts){
   this.edgeLength = opts.edgeLength;
-  this.numSquares = opts.numSquares;
+  this.numSquares = opts.numSquares == null ? 10 : opts.numSquares;
 }
-
-Chessboard.tpl = _.template(fs.readFileSync('chessboard.tpl'));
+var tplPath = path.join(__dirname,'chessboard.tpl');
+Chessboard.tpl = _.template(fs.readFileSync(tplPath));
 
 _.assign(Chessboard.prototype, {
   toPOVRay: function(){
@@ -16,7 +17,8 @@ _.assign(Chessboard.prototype, {
     return Chessboard.tpl({
       len: len,
       margin: l2,
-      scale: this.edgeLength / this.numSquares
+      scale: this.numSquares === 0 ? 0 : this.edgeLength / this.numSquares,
+      showSquares: Boolean(this.numSquares)
     });
   }
 });
