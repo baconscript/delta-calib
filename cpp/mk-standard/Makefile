@@ -1,2 +1,8 @@
+CC = g++-4.7
+
+CFLAGS = -Wall -std=c++11
+
+CFLAGS += `pkg-config --cflags --libs opencv`
+
 all:
-	g++ -std=c++11 mk-standard.cpp -o mk-standard -I/usr/include -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_features2d
+	$(CC) $(CFLAGS) mk-standard.cpp -o mk-standard
