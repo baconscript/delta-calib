@@ -3,7 +3,7 @@ ERR = $(shell which g++ >/dev/null; echo $$?)
 ifeq "$(ERR)" "0"
 	CC = g++
 else
-	CC = g++4.7
+	CC = g++-4.7
 endif
 
 CFLAGS = -Wall -std=c++11
