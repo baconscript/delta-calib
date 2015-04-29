@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
       imagePoints.push_back(corners);
     }
   }
-  objectPoints = getObjectPoints(imagePoints.size(), boardSize, squareSize);
+  objectPoints = getObjectPoints((unsigned int)imagePoints.size(), boardSize, squareSize);
   std::cout << std::endl << "Images: " << images.size() << ", valid images: " << imagePoints.size();
 
   cv::Mat cameraMatrix;
